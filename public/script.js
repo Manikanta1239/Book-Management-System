@@ -1,5 +1,3 @@
-// Add a new file for JavaScript code
-
 const API_URL = 'http://localhost:3000/books';
 let updateModal;
 
