@@ -14,7 +14,7 @@ mongoose.connect('mongodb://localhost:27017/bookstore', {
     useNewUrlParser: true,
     useUnifiedTopology: true
 })
-.then(() => console.log('Successfully connected to MongoDB'))
+.then(() => console.log('Connected to MongoDB'))
 .catch(err => console.error('MongoDB connection error:', err));
 
 // Book Schema
@@ -29,7 +29,7 @@ const Book = mongoose.model('Book', bookSchema);
 // Routes
 app.get('/books', async (req, res) => {
     try {
-        const books = await Book.find();
+        const books = await Book.find().sort({ createdAt: -1 });
         res.json(books);
     } catch (err) {
         console.error('Error fetching books:', err);
@@ -45,14 +45,16 @@ app.post('/books', async (req, res) => {
             return res.status(400).json({ error: 'All fields are required' });
         }
 
-        const newBook = new Book({ title, author, genre });
-        await newBook.save();
-        res.status(201).json(newBook);
+        const book = new Book({ title, author, genre });
+        await book.save();
+        res.status(201).json(book);
     } catch (err) {
         console.error('Error adding book:', err);
         res.status(500).json({ error: 'Error adding book' });
     }
 });
+
+// Update the PUT route
 
 app.put('/books/:id', async (req, res) => {
     try {
@@ -62,17 +64,17 @@ app.put('/books/:id', async (req, res) => {
             return res.status(400).json({ error: 'All fields are required' });
         }
 
-        const updatedBook = await Book.findByIdAndUpdate(
+        const book = await Book.findByIdAndUpdate(
             req.params.id,
             { title, author, genre },
             { new: true, runValidators: true }
         );
-        
-        if (!updatedBook) {
+
+        if (!book) {
             return res.status(404).json({ error: 'Book not found' });
         }
-        
-        res.json(updatedBook);
+
+        res.json(book);
     } catch (err) {
         console.error('Error updating book:', err);
         res.status(500).json({ error: 'Error updating book' });
@@ -81,16 +83,32 @@ app.put('/books/:id', async (req, res) => {
 
 app.delete('/books/:id', async (req, res) => {
     try {
-        const deletedBook = await Book.findByIdAndDelete(req.params.id);
+        const book = await Book.findByIdAndDelete(req.params.id);
         
-        if (!deletedBook) {
+        if (!book) {
             return res.status(404).json({ error: 'Book not found' });
         }
-        
+
         res.json({ message: 'Book deleted successfully' });
     } catch (err) {
         console.error('Error deleting book:', err);
         res.status(500).json({ error: 'Error deleting book' });
+    }
+});
+
+// Add this route after your other routes, before the PORT declaration
+app.get('/books/:id', async (req, res) => {
+    try {
+        const book = await Book.findById(req.params.id);
+        
+        if (!book) {
+            return res.status(404).json({ error: 'Book not found' });
+        }
+
+        res.json(book);
+    } catch (err) {
+        console.error('Error fetching book:', err);
+        res.status(500).json({ error: 'Error fetching book details' });
     }
 });
 
