@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Management System</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome for icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .container {
+            max-width: 1200px;
+            margin-top: 2rem;
+        }
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .table {
+            margin-bottom: 0;
+        }
+        .btn-action {
+            padding: 0.25rem 0.5rem;
+            margin: 0 0.2rem;
+        }
+        .alert {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            min-width: 300px;
+            display: none;
+        }
+        .form-control:focus {
+            box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+        }
+        .header-section {
+            background-color: #198754;
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header Section -->
+    <div class="header-section">
+        <div class="container">
+            <h1 class="text-center mb-0">
+                <i class="fas fa-book-open me-2"></i>Book Management System
+            </h1>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Alert Messages -->
+        <div id="message" class="alert" role="alert"></div>
+
+        <div class="row">
+            <!-- Add Book Form -->
+            <div class="col-md-4 mb-4">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-plus-circle me-2"></i>Add New Book
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="addBookForm">
+                            <div class="mb-3">
+                                <label for="title" class="form-label">Title</label>
+                                <input type="text" class="form-control" id="title" name="title" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="author" class="form-label">Author</label>
+                                <input type="text" class="form-control" id="author" name="author" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="genre" class="form-label">Genre</label>
+                                <input type="text" class="form-control" id="genre" name="genre" required>
+                            </div>
+                            <button type="submit" class="btn btn-success w-100">
+                                <i class="fas fa-plus-circle me-2"></i>Add Book
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Books List -->
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-list me-2"></i>Books List
+                        </h5>
+                        <span id="bookCount" class="badge bg-light text-dark">0 books</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="booksTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Title</th>
+                                        <th>Author</th>
+                                        <th>Genre</th>
+                                        <th class="text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Update Book Modal -->
+    <div class="modal fade" id="updateBookModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">Update Book</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="updateBookForm" onsubmit="event.preventDefault(); handleUpdateSubmit();">
+                        <input type="hidden" id="updateBookId">
+                        <div class="mb-3">
+                            <label for="updateTitle" class="form-label">Title</label>
+                            <input type="text" class="form-control" id="updateTitle" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="updateAuthor" class="form-label">Author</label>
+                            <input type="text" class="form-control" id="updateAuthor" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="updateGenre" class="form-label">Genre</label>
+                            <input type="text" class="form-control" id="updateGenre" required>
+                        </div>
+                        <div class="modal-footer px-0 pb-0">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-success">Update Book</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS and Popper.js -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        const API_URL = 'http://localhost:3000';
+        let updateModal;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            updateModal = new bootstrap.Modal(document.getElementById('updateBookModal'));
+            fetchBooks();
+        });
+
+        async function fetchBooks() {
+            try {
+                const response = await fetch(`${API_URL}/books`);
+                const data = await response.json();
+                const tbody = document.querySelector('#booksTable tbody');
+                document.getElementById('bookCount').textContent = `${data.length} books`;
+                
+                tbody.innerHTML = data.map(book => `
+                    <tr>
+                        <td>${book._id}</td>
+                        <td>${book.title}</td>
+                        <td>${book.author}</td>
+                        <td>${book.genre}</td>
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-outline-primary btn-action" onclick="updateBook('${book._id}', '${book.title}', '${book.author}', '${book.genre}')">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger btn-action" onclick="deleteBook('${book._id}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                showMessage('Error loading books', 'danger');
+            }
+        }
+
+        document.getElementById('addBookForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const bookData = Object.fromEntries(formData);
+
+            try {
+                const response = await fetch(`${API_URL}/books`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(bookData)
+                });
+
+                if (!response.ok) throw new Error('Failed to add book');
+
+                e.target.reset();
+                showMessage('Book added successfully', 'success');
+                fetchBooks();
+            } catch (err) {
+                showMessage('Error adding book', 'danger');
+            }
+        });
+
+        function updateBook(id, title, author, genre) {
+            // Escape potential quotes in the values
+            title = title.replace(/'/g, '&#39;');
+            author = author.replace(/'/g, '&#39;');
+            genre = genre.replace(/'/g, '&#39;');
+
+            // Set values in the form
+            document.getElementById('updateBookId').value = id;
+            document.getElementById('updateTitle').value = title;
+            document.getElementById('updateAuthor').value = author;
+            document.getElementById('updateGenre').value = genre;
+
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('updateBookModal'));
+            modal.show();
+        }
+
+        async function handleUpdateSubmit() {
+            try {
+                const id = document.getElementById('updateBookId').value;
+                const bookData = {
+                    title: document.getElementById('updateTitle').value.trim(),
+                    author: document.getElementById('updateAuthor').value.trim(),
+                    genre: document.getElementById('updateGenre').value.trim()
+                };
+
+                // Validate input
+                if (!bookData.title || !bookData.author || !bookData.genre) {
+                    showMessage('All fields are required', 'danger');
+                    return;
+                }
+
+                const response = await fetch(`${API_URL}/books/${id}`, {
+                    method: 'PUT',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(bookData)
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to update book');
+                }
+
+                // Close modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('updateBookModal'));
+                modal.hide();
+
+                showMessage('Book updated successfully', 'success');
+                await fetchBooks();
+            } catch (err) {
+                console.error('Update error:', err);
+                showMessage(err.message || 'Error updating book', 'danger');
+            }
+        }
+
+        async function deleteBook(id) {
+            if (!confirm('Are you sure you want to delete this book?')) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/books/${id}`, { method: 'DELETE' });
+                if (!response.ok) throw new Error('Failed to delete book');
+
+                showMessage('Book deleted successfully', 'success');
+                fetchBooks();
+            } catch (err) {
+                showMessage('Error deleting book', 'danger');
+            }
+        }
+
+        function showMessage(message, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = message;
+            messageDiv.className = `alert alert-${type}`;
+            messageDiv.style.display = 'block';
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
