@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
+require('dotenv').config();
 
 const app = express();
 
@@ -9,13 +10,10 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-// MongoDB Connection
-mongoose.connect('mongodb://localhost:27017/bookstore', {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-})
-.then(() => console.log('Connected to MongoDB'))
-.catch(err => console.error('MongoDB connection error:', err));
+// MongoDB Connection using environment variable
+mongoose.connect(process.env.MONGODB_URI)
+    .then(() => console.log('Connected to MongoDB'))
+    .catch(err => console.error('MongoDB connection error:', err));
 
 // Book Schema
 const bookSchema = new mongoose.Schema({
@@ -27,6 +25,7 @@ const bookSchema = new mongoose.Schema({
 const Book = mongoose.model('Book', bookSchema);
 
 // Routes
+// Get all books
 app.get('/books', async (req, res) => {
     try {
         const books = await Book.find().sort({ createdAt: -1 });
@@ -37,6 +36,21 @@ app.get('/books', async (req, res) => {
     }
 });
 
+// Get single book
+app.get('/books/:id', async (req, res) => {
+    try {
+        const book = await Book.findById(req.params.id);
+        if (!book) {
+            return res.status(404).json({ error: 'Book not found' });
+        }
+        res.json(book);
+    } catch (err) {
+        console.error('Error fetching book:', err);
+        res.status(500).json({ error: 'Error fetching book details' });
+    }
+});
+
+// Create book
 app.post('/books', async (req, res) => {
     try {
         const { title, author, genre } = req.body;
@@ -54,8 +68,7 @@ app.post('/books', async (req, res) => {
     }
 });
 
-// Update the PUT route
-
+// Update book
 app.put('/books/:id', async (req, res) => {
     try {
         const { title, author, genre } = req.body;
@@ -81,6 +94,7 @@ app.put('/books/:id', async (req, res) => {
     }
 });
 
+// Delete book
 app.delete('/books/:id', async (req, res) => {
     try {
         const book = await Book.findByIdAndDelete(req.params.id);
@@ -96,23 +110,9 @@ app.delete('/books/:id', async (req, res) => {
     }
 });
 
-// Add this route after your other routes, before the PORT declaration
-app.get('/books/:id', async (req, res) => {
-    try {
-        const book = await Book.findById(req.params.id);
-        
-        if (!book) {
-            return res.status(404).json({ error: 'Book not found' });
-        }
-
-        res.json(book);
-    } catch (err) {
-        console.error('Error fetching book:', err);
-        res.status(500).json({ error: 'Error fetching book details' });
-    }
-});
-
-const PORT = process.env.PORT || 3000;
+// Start server using environment variable
+// const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
